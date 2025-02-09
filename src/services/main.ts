@@ -1,70 +1,88 @@
 import readline from 'readline';
-import { evaluateResponse } from '../api/weave.js';
 import * as weave from 'weave';
-import { fetchMarvelData } from '../api/marvel.js'
-import { generateOpenAIResponse } from '../api/openai.js'
-import { evaluateResponseWithGemini } from '../api/gemini.js'
+import { config } from '../utils/config.js';
+import { fetchMarvelData, testMarvelConnection } from '../api/marvel.js';
+import { generateOpenAIResponse, extractCharacterName } from '../api/openai.js';
+import { evaluateResponseWithGemini } from '../api/gemini.js';
 
-// Initialize weave properly with async initialization
-async function initializeWeave() {
-    try {
-        await weave.init('marvel_comics');
-        console.log('Weave initialized successfully');
-    } catch (error) {
-        console.error('Error initializing weave:', error);
-    }
-}
+// Initialize Weave
+await weave.init(config.weave.project);
 
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
+// Step 1: Extract Character Name from OpenAI
+const extractCharacterNameOp = weave.op(async (query: string) => {
+    console.log("Extracting Marvel character name from query...");
+    return await extractCharacterName(query);
 });
 
-// Update processQuery to use all three APIs in sequence
+// Step 2: Fetch Marvel Data
+const fetchMarvelDataOp = weave.op(async (characterName: string) => {
+    console.log(`Fetching Marvel data for: ${characterName}`);
+    return await fetchMarvelData(characterName);
+});
+
+// Step 3: Generate OpenAI Response
+const generateOpenAIResponseOp = weave.op(async (query: string, marvelData: any) => {
+    console.log("Generating OpenAI response...");
+    return await generateOpenAIResponse(query, marvelData);
+});
+
+// Step 4: Evaluate with Gemini
+const evaluateResponseWithGeminiOp = weave.op(async (query: string, openAIResponse: string, marvelData: any) => {
+    console.log("Evaluating response with Gemini...");
+    return await evaluateResponseWithGemini(query, openAIResponse, marvelData);
+});
+
+// Step 5: Full Process with Tracing
 const processQuery = weave.op(async (query: string) => {
     try {
-        // 1. First try Marvel API
-        console.log("Fetching Marvel data...");
-        const marvelData = await fetchMarvelData(query);
-        
-        // 2. Get OpenAI response with Marvel context
-        console.log("Generating OpenAI response...");
-        const openAIResponse = await generateOpenAIResponse(query, marvelData);
-        
-        // 3. Use Gemini for evaluation/grounding
-        console.log("Getting Gemini grounding...");
-        const geminiGrounding = await evaluateResponseWithGemini(query, openAIResponse, marvelData);
-        
-        // 4. Evaluate the response
-        return evaluateResponse(query, openAIResponse, marvelData);
+        const characterName = await extractCharacterNameOp(query);
+        const marvelData = characterName ? await fetchMarvelDataOp(characterName) : null;
+        const openAIResponse = await generateOpenAIResponseOp(query, marvelData);
+        const geminiEvaluation = await evaluateResponseWithGeminiOp(query, openAIResponse, marvelData);
+
+        const evaluationTrace = {
+            query,
+            extracted_character: characterName || "None",
+            openai_response: openAIResponse,
+            marvel_data: marvelData,
+            evaluation: geminiEvaluation,
+            quality_score: geminiEvaluation?.quality_score || 0,
+            timestamp: new Date().toISOString()
+        };
+
+        return evaluationTrace;
     } catch (error) {
-        console.error('Error in processQuery:', error);
+        console.error("Error in processQuery:", error);
         throw error;
     }
 });
 
+// CLI for Testing
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
 const startCLI = async () => {
-    // Initialize weave before starting the CLI
-    await initializeWeave();
-    
     rl.question('Enter a Marvel-related query (or type "exit" to quit): ', async (query: string) => {
         if (query.toLowerCase() === 'exit') {
             console.log("Exiting...");
             rl.close();
             return;
         }
-
         try {
             const result = await processQuery(query);
             console.log('Processed Query Result:', result);
         } catch (error) {
             console.error('Error processing query:', error);
         }
-
-        // Keep prompting the user
         startCLI();
     });
 };
 
-// Start interactive testing with async initialization
+// Ensure Marvel API is working before starting
+console.log('Testing Marvel API connection...');
+const marvelConnected = await testMarvelConnection();
+if (!marvelConnected) {
+    console.error('Failed to connect to Marvel API. Please check your configuration.');
+    process.exit(1);
+}
+
 startCLI();

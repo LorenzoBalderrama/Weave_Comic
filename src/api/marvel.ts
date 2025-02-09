@@ -1,44 +1,72 @@
 import axios from 'axios';
 import crypto from 'crypto';
-import { config } from 'dotenv';
-config();
+import { config } from '../utils/config.js';
 
-const MARVEL_API_KEY = process.env.MARVEL_PUBLIC_KEY;
-const MARVEL_PRIVATE_KEY = process.env.MARVEL_PRIVATE_KEY;
-const MARVEL_BASE_URL = 'https://gateway.marvel.com/v1/public';
-
-const getMarvelAuthParams = () => {
-    const ts = new Date().getTime().toString();
-    const hash = crypto.createHash('md5').update(ts + MARVEL_PRIVATE_KEY + MARVEL_API_KEY).digest('hex');
-    return { ts, apikey: MARVEL_API_KEY, hash };
-};
-
-export const fetchMarvelData = async (query: string) => {
+export const fetchMarvelData = async (characterName: string) => {
     try {
-        const { ts, apikey, hash } = getMarvelAuthParams();
-        const response = await axios.get(`${MARVEL_BASE_URL}/characters`, {
-            params: { 
-                nameStartsWith: query.split(' ')[0],
-                ts, 
-                apikey, 
-                hash,
-                limit: 1
-            }
-        });
+        // Generate timestamp and hash for Marvel API authentication
+        const ts = new Date().getTime().toString();
+        const hash = crypto
+            .createHash('md5')
+            .update(ts + config.marvel.privateKey + config.marvel.apiKey)
+            .digest('hex');
 
-        if (response.data.data.results && response.data.data.results.length > 0) {
-            const character = response.data.data.results[0];
-            return {
-                name: character.name,
-                description: character.description || "No description available",
-                thumbnail: `${character.thumbnail.path}.${character.thumbnail.extension}`,
-                urls: character.urls,
-                attribution: response.data.attributionText
-            };
+        // Build the Marvel API URL with authentication parameters
+        const url = `${config.marvel.baseUrl}/characters`;
+        const params = {
+            ts,
+            apikey: config.marvel.apiKey,
+            hash,
+            name: characterName,  // Now using extracted clean name
+            limit: 1
+        };
+
+        const response = await axios.get(url, { params });
+        
+        // Log API response for debugging
+        console.log('Marvel API Response:', JSON.stringify(response.data, null, 2));
+
+        return response.data.data.results.length > 0 ? response.data.data.results[0] : null;
+    } catch (error: any) {
+        if (axios.isAxiosError(error)) {
+            console.error('Marvel API Error:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message
+            });
+        } else {
+            console.error('Error fetching Marvel data:', error.message);
         }
         return null;
-    } catch (error) {
-        console.error('Error fetching Marvel data:', error);
-        return null;
+    }
+};
+
+// Function to test Marvel API connection
+export const testMarvelConnection = async () => {
+    try {
+        const ts = new Date().getTime().toString();
+        const hash = crypto
+            .createHash('md5')
+            .update(ts + config.marvel.privateKey + config.marvel.apiKey)
+            .digest('hex');
+
+        const url = `${config.marvel.baseUrl}/characters`;
+        const params = {
+            ts,
+            apikey: config.marvel.apiKey,
+            hash,
+            limit: 1
+        };
+
+        const response = await axios.get(url, { params });
+        console.log('Marvel API Test Connection Successful');
+        return true;
+    } catch (error: any) {
+        console.error('Marvel API Test Connection Failed:', {
+            status: error.response?.status,
+            message: error.message,
+            data: error.response?.data
+        });
+        return false;
     }
 };
