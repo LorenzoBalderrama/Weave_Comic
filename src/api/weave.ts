@@ -6,8 +6,8 @@ config();
 const PROJECT = 'marvel_comics';
 await weave.init(PROJECT);
 
-// Define a custom evaluation function
-export const evaluateResponse = async (query: string, openAIResponse: string, marvelData: any) => {
+// custom evaluation function
+export const evaluateResponse = weave.op(async (query: string, openAIResponse: string, marvelData: any) => {
     // Example evaluation: Check if the OpenAI response contains the correct Marvel character name
     const characterName = marvelData?.name || '';
     const accuracyScore = openAIResponse.includes(characterName) ? 1 : 0;
@@ -22,4 +22,4 @@ export const evaluateResponse = async (query: string, openAIResponse: string, ma
 
     console.log('Evaluation Result:', evaluation);
     return evaluation;
-};
+});

@@ -1,8 +1,9 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import { config } from '../utils/config.js';
+import * as weave from 'weave';
 
-export const fetchMarvelData = async (characterName: string) => {
+export const fetchMarvelData = weave.op(async (characterName: string) => {
     try {
         // Generate timestamp and hash for Marvel API authentication
         const ts = new Date().getTime().toString();
@@ -39,10 +40,10 @@ export const fetchMarvelData = async (characterName: string) => {
         }
         return null;
     }
-};
+});
 
 // Function to test Marvel API connection
-export const testMarvelConnection = async () => {
+export const testMarvelConnection = weave.op(async () => {
     try {
         const ts = new Date().getTime().toString();
         const hash = crypto
@@ -69,4 +70,4 @@ export const testMarvelConnection = async () => {
         });
         return false;
     }
-};
+});

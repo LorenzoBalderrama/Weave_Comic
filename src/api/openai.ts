@@ -1,9 +1,12 @@
 import { OpenAI } from 'openai';
 import { config } from '../utils/config.js';
+import * as weave from 'weave'
 
-const openai = new OpenAI({ apiKey: config.openai.apiKey });
+const openai = weave.wrapOpenAI(new OpenAI({ apiKey: config.openai.apiKey }));
 
-export const extractCharacterName = async (query: string): Promise<string | null> => {
+weave.init('marvel_comics');
+
+export const extractCharacterName = weave.op(async (query: string): Promise<string | null> => {
     try {
         const prompt = `Extract the Marvel character name from this question. Only return the character name, nothing else:\n\n"${query}"`;
         
@@ -19,9 +22,9 @@ export const extractCharacterName = async (query: string): Promise<string | null
         console.error("Error extracting character name:", error);
         return null;
     }
-};
+});
 
-export const generateOpenAIResponse = async (query: string, marvelData: any): Promise<string> => {
+export const generateOpenAIResponse = weave.op(async (query: string, marvelData: any): Promise<string> => {
     try {
         let prompt = `You are a Marvel expert. Answer the following question with accurate information.`;
         
@@ -42,4 +45,4 @@ export const generateOpenAIResponse = async (query: string, marvelData: any): Pr
         console.error("Error generating OpenAI response:", error);
         return "I encountered an error while generating a response.";
     }
-};
+});
