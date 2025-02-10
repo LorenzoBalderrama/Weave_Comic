@@ -11,7 +11,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 export const evaluateResponseWithAnthropic = weave.op(async (query: string, openAIResponse: string, marvelData: any) => {
     try {
         const response = await anthropic.messages.create({
-            model: "claude-3-haiku-20240307",  // Use a valid model like "claude-2.1" or "claude-instant-1"
+            model: "claude-3-haiku-20240307",
             max_tokens: 100,
             messages: [
                 {
