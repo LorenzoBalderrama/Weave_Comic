@@ -1,5 +1,8 @@
 import axios from 'axios';
 import { config } from '../utils/config.js';
+import dotenv from "dotenv";
+
+dotenv.config();
 
 export const evaluateResponseWithGemini = async (query: string, openAIResponse: string, marvelData: any) => {
     try {
@@ -20,7 +23,7 @@ export const evaluateResponseWithGemini = async (query: string, openAIResponse: 
             {
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${config.gemini.apiKey}`
+                    'Authorization': `Bearer ${process.env.GEMINI_API_KEY}`
                 }
             }
         );
