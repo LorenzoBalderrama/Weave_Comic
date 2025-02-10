@@ -3,7 +3,7 @@ import * as weave from 'weave';
 import { config } from '../utils/config.js';
 import { fetchMarvelData, testMarvelConnection } from '../api/marvel.js';
 import { generateOpenAIResponse, extractCharacterName } from '../api/openai.js';
-import { evaluateResponseWithGemini } from '../api/gemini.js';
+import { evaluateResponseWithAnthropic } from '../api/anthropic.js';
 
 // Initialize Weave
 await weave.init(config.weave.project);
@@ -27,9 +27,9 @@ const generateOpenAIResponseOp = weave.op(async (query: string, marvelData: any)
 });
 
 // Step 4: Evaluate with Gemini
-const evaluateResponseWithGeminiOp = weave.op(async (query: string, openAIResponse: string, marvelData: any) => {
-    console.log("Evaluating response with Gemini...");
-    return await evaluateResponseWithGemini(query, openAIResponse, marvelData);
+const evaluateResponseWithAnthropicOp = weave.op(async (query: string, openAIResponse: string, marvelData: any) => {
+    console.log("Evaluating response with Anthropic...");
+    return await evaluateResponseWithAnthropic(query, openAIResponse, marvelData);
 });
 
 // Step 5: Full Process with Tracing
@@ -38,15 +38,15 @@ const processQuery = weave.op(async (query: string) => {
         const characterName = await extractCharacterNameOp(query);
         const marvelData = characterName ? await fetchMarvelDataOp(characterName) : null;
         const openAIResponse = await generateOpenAIResponseOp(query, marvelData);
-        const geminiEvaluation = await evaluateResponseWithGeminiOp(query, openAIResponse, marvelData);
+        const anthropicEvaluation = await evaluateResponseWithAnthropic(query, openAIResponse, marvelData);
 
         const evaluationTrace = {
             query,
             extracted_character: characterName || "None",
             openai_response: openAIResponse,
             marvel_data: marvelData,
-            evaluation: geminiEvaluation,
-            quality_score: geminiEvaluation?.quality_score || 0,
+            evaluation: anthropicEvaluation,
+            quality_score: anthropicEvaluation?.quality_score || 0,
             timestamp: new Date().toISOString()
         };
 
