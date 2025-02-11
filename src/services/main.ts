@@ -26,7 +26,7 @@ const generateOpenAIResponseOp = weave.op(async (query: string, marvelData: any)
     return await generateOpenAIResponse(query, marvelData);
 });
 
-// Step 4: Evaluate with Gemini
+// Step 4: Evaluate with Anthropic
 const evaluateResponseWithAnthropicOp = weave.op(async (query: string, openAIResponse: string, marvelData: any) => {
     console.log("Evaluating response with Anthropic...");
     return await evaluateResponseWithAnthropic(query, openAIResponse, marvelData);
@@ -38,7 +38,7 @@ const processQuery = weave.op(async (query: string) => {
         const characterName = await extractCharacterNameOp(query);
         const marvelData = characterName ? await fetchMarvelDataOp(characterName) : null;
         const openAIResponse = await generateOpenAIResponseOp(query, marvelData);
-        const anthropicEvaluation = await evaluateResponseWithAnthropic(query, openAIResponse, marvelData);
+        const anthropicEvaluation = await evaluateResponseWithAnthropicOp(query, openAIResponse, marvelData);
 
         const evaluationTrace = {
             query,
